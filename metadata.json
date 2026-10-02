@@ -1,0 +1,6 @@
+{
+  "name": "Grid Guardian Hub // V2099",
+  "description": "Multi-tier PWA environmental telemetry, bio-coherence monitoring, 12D scalar shield station and local IndexedDB deck.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

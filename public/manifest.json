@@ -1,0 +1,37 @@
+{
+  "id": "/",
+  "name": "Grid Guardian Hub: V2099 Telemetry Station",
+  "short_name": "GridGuardian",
+  "description": "Multi-tier PWA environmental telemetry, bio-coherence monitoring, 12D scalar shield station and local IndexedDB deck.",
+  "start_url": "/",
+  "scope": "/",
+  "background_color": "#020408",
+  "theme_color": "#060a13",
+  "display": "standalone",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}

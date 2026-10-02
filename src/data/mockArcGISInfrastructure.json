@@ -1,0 +1,70 @@
+{
+  "wkid": 4326,
+  "features": [
+    {
+      "attributes": {
+        "OBJECTID": 101,
+        "CarrierName": "Gatesville Main Telecom Array",
+        "StructureType": "Monopole Cellular Tower (4G/5G)",
+        "TowerHeight": 45,
+        "Status": "ACTIVE_UNSHIELDED"
+      },
+      "geometry": {
+        "x": -97.7431,
+        "y": 31.4339
+      }
+    },
+    {
+      "attributes": {
+        "OBJECTID": 102,
+        "CarrierName": "Coryell Regional Power Substation",
+        "StructureType": "High-Voltage Distribution Node",
+        "TowerHeight": 15,
+        "Status": "VOLTAGE_DISTORTION"
+      },
+      "geometry": {
+        "x": -97.7512,
+        "y": 31.4412
+      }
+    },
+    {
+      "attributes": {
+        "OBJECTID": 103,
+        "CarrierName": "Leon Junction Smart-Meter Hub",
+        "StructureType": "Localized Wireless Mesh Collector",
+        "TowerHeight": 8,
+        "Status": "PULSING_EMISSION"
+      },
+      "geometry": {
+        "x": -97.7385,
+        "y": 31.4281
+      }
+    },
+    {
+      "attributes": {
+        "OBJECTID": 104,
+        "CarrierName": "Leon River Hydro-Grid Sensor 04",
+        "StructureType": "Subsurface Telemetry Transceiver",
+        "TowerHeight": 12,
+        "Status": "MONITORING"
+      },
+      "geometry": {
+        "x": -97.7324,
+        "y": 31.4388
+      }
+    },
+    {
+      "attributes": {
+        "OBJECTID": 105,
+        "CarrierName": "North Ridge Radar Mast (FAA Beacon)",
+        "StructureType": "Commercial Aviation Transponder",
+        "TowerHeight": 55,
+        "Status": "RADAR_EMISSION"
+      },
+      "geometry": {
+        "x": -97.7562,
+        "y": 31.4465
+      }
+    }
+  ]
+}

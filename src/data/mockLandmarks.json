@@ -1,0 +1,55 @@
+{
+  "wkid": 4326,
+  "landmarks": [
+    {
+      "landmark_id": "poi-gatesville-fauntleroy",
+      "title": "Fauntleroy Park Grid Point",
+      "objective_type": "BOTANY_LOG",
+      "latitude": 31.4326,
+      "longitude": -97.7364,
+      "required_proximity_meters": 150,
+      "lore_text_block": "Fauntleroy Park serves as an organic biological buffer zone. Grounding current stabilizes local earth grid lines and counters electromagnetic resonance friction.",
+      "is_completed": false
+    },
+    {
+      "landmark_id": "poi-gatesville-library",
+      "title": "Gatesville Public Library Junction",
+      "objective_type": "LORE_UNLOCK",
+      "latitude": 31.4348,
+      "longitude": -97.7441,
+      "required_proximity_meters": 45,
+      "lore_text_block": "The civic archive core holds deep historical data strata. Re-synchronizing this node restores communal information flow across the municipal grid.",
+      "is_completed": true
+    },
+    {
+      "landmark_id": "poi-gatesville-rotary",
+      "title": "Rotary Park Water Signet",
+      "objective_type": "WATER_REMEDIATION",
+      "latitude": 31.4429,
+      "longitude": -97.7408,
+      "required_proximity_meters": 100,
+      "lore_text_block": "Leon River tributary intersection point. Running hydro-purification acoustic mantras at 528 Hz balances heavy metallic sediment ions.",
+      "is_completed": false
+    },
+    {
+      "landmark_id": "poi-gatesville-substation",
+      "title": "Node-Substation-09B",
+      "objective_type": "SHIELD_INCEPTION",
+      "latitude": 31.4412,
+      "longitude": -97.7512,
+      "required_proximity_meters": 80,
+      "lore_text_block": "Core regional distribution transformer. Requires 12D Maharic Current harmonic pulse to seal decaying scalar shielding during geomagnetic surges.",
+      "is_completed": false
+    },
+    {
+      "landmark_id": "poi-gatesville-crystal",
+      "title": "Core Crystal Junction",
+      "objective_type": "GEOLOGY_DISCOVERY",
+      "latitude": 31.4281,
+      "longitude": -97.7385,
+      "required_proximity_meters": 50,
+      "lore_text_block": "Limestone bedrock node containing quartz crystallization deposits. Natural subterranean capacitor for planetary scalar grid anchoring.",
+      "is_completed": false
+    }
+  ]
+}
