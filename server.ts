@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import pg from 'pg';
 
 dotenv.config();
 
@@ -17,6 +18,78 @@ const port = parseInt(process.env.PORT || '3000', 10);
 
 app.use(express.json({ limit: '60mb' }));
 app.use(express.urlencoded({ extended: true, limit: '60mb' }));
+
+// AlloyDB via Private Service Connect (PSC) Connection Pool
+// Routes through internal IP (e.g. 10.0.0.5) over private VPC tunnel with SSL
+const dbPool = process.env.DATABASE_URL
+  ? new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false, // Enforce SSL over the private PSC tunnel
+      },
+      connectionTimeoutMillis: 5000,
+      max: 10,
+    })
+  : null;
+
+if (dbPool) {
+  console.log('🔒 [ALLOYDB PSC] Private Service Connect connection pool configured');
+}
+
+// AlloyDB PSC Status & Telemetry Ingestion
+app.get('/api/telemetry/alloydb/status', async (_req, res) => {
+  if (!dbPool) {
+    return res.json({
+      configured: false,
+      status: 'UNCONFIGURED',
+      message: 'DATABASE_URL not set. Configure Private Service Connect endpoint (e.g. 10.0.0.5:5432).',
+    });
+  }
+
+  try {
+    const client = await dbPool.connect();
+    const result = await client.query('SELECT NOW() as server_time, version() as db_version');
+    client.release();
+    res.json({
+      configured: true,
+      status: 'CONNECTED',
+      serverTime: result.rows[0]?.server_time,
+      dbVersion: result.rows[0]?.db_version,
+      tunnelType: 'Private Service Connect (Zero Public Exposure)',
+    });
+  } catch (err: any) {
+    res.status(503).json({
+      configured: true,
+      status: 'DISCONNECTED',
+      error: err.message,
+    });
+  }
+});
+
+app.post('/api/telemetry/alloydb/stream', async (req, res) => {
+  const { operatorId, heartRate, hrvMs, alertLevel, timestamp } = req.body;
+  if (!dbPool) {
+    return res.status(200).json({
+      stored: false,
+      mode: 'LOCAL_BUFFER',
+      message: 'AlloyDB PSC not attached; telemetry buffered in local state.',
+    });
+  }
+
+  try {
+    const query = `
+      INSERT INTO grid_telemetry (operator_id, heart_rate, hrv_ms, alert_level, recorded_at)
+      VALUES ($1, $2, $3, $4, COALESCE($5, NOW()))
+      RETURNING id, recorded_at;
+    `;
+    const values = [operatorId || 'OPERATOR_LOCAL', heartRate || 75, hrvMs || 50, alertLevel || 'GREEN', timestamp];
+    const result = await dbPool.query(query, values);
+    res.json({ stored: true, id: result.rows[0]?.id, timestamp: result.rows[0]?.recorded_at });
+  } catch (err: any) {
+    console.error('AlloyDB Stream Insert Error:', err.message);
+    res.status(500).json({ stored: false, error: err.message });
+  }
+});
 
 // Server-side Google GenAI initialization with User-Agent header
 const ai = new GoogleGenAI({

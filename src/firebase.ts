@@ -3,6 +3,8 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   User
@@ -27,15 +29,36 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export const loginWithGoogle = async (): Promise<User | undefined> => {
+// Force Google to show the account selection prompt
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
+
+export const provider = googleProvider;
+
+export const signInWithGooglePopup = async (): Promise<User | undefined> => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    // The signed-in user info
+    const result = await signInWithPopup(auth, provider);
+    
+    // Optional: Get Google Access Token if you need to call other Google APIs
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential?.accessToken;
+
     const user = result.user;
-    console.log("Logged in as:", user.displayName);
+    console.log("Signed in successfully:", user.displayName);
     return user;
+  } catch (error: any) {
+    console.error("Popup Sign-In failed:", error.code, error.message);
+  }
+};
+
+export const loginWithGoogle = signInWithGooglePopup;
+
+export const loginWithRedirect = async (): Promise<void> => {
+  try {
+    await signInWithRedirect(auth, googleProvider);
   } catch (error) {
-    console.error("Error signing in with Google:", error);
+    console.error("Error signing in with redirect:", error);
   }
 };
 
@@ -50,6 +73,8 @@ export const logout = async (): Promise<void> => {
 
 export {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,

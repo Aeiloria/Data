@@ -72,6 +72,7 @@ export function useFirebaseAuth() {
     loading,
     authError,
     loginWithGoogle,
+    signInWithGooglePopup: loginWithGoogle,
     logout
   };
 }
