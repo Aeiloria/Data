@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with identifier, display name, and access tier",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "accessTier": { "type": "string", "enum": ["OPERATOR_LEVEL_1", "OPERATOR_LEVEL_12", "ADMINISTRATOR"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "displayName"]
+    },
+    "WellnessLog": {
+      "title": "WellnessLog",
+      "description": "Biometric routine logs recorded by an operator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "maxLength": 100 },
+        "heartRateBefore": { "type": "number" },
+        "heartRateAfter": { "type": "number" },
+        "hrvBefore": { "type": "number" },
+        "hrvAfter": { "type": "number" },
+        "encrypted": { "type": "boolean" },
+        "rawCiphertext": { "type": "string", "maxLength": 4096 },
+        "notes": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "userId", "timestamp", "type", "heartRateBefore", "heartRateAfter"]
+    },
+    "CustomPin": {
+      "title": "CustomPin",
+      "description": "Custom geographic coordinate pins placed by the user on the radar grid",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "label": { "type": "string", "maxLength": 100 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "pinnedAt": { "type": "string", "format": "date-time" },
+        "category": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "userId", "label", "latitude", "longitude", "pinnedAt"]
+    },
+    "RegionalLandmark": {
+      "title": "RegionalLandmark",
+      "description": "Public sector landmarks and objectives across the grid sector",
+      "type": "object",
+      "properties": {
+        "landmark_id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "objective_type": { "type": "string", "maxLength": 64 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "required_proximity_meters": { "type": "number" },
+        "lore_text_block": { "type": "string", "maxLength": 2048 },
+        "is_completed": { "type": "boolean" },
+        "synchronized_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["landmark_id", "title", "objective_type", "latitude", "longitude", "required_proximity_meters"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile documents"
+    },
+    "/users/{userId}/wellness_logs/{logId}": {
+      "schema": { "$ref": "#/entities/WellnessLog" },
+      "description": "Individual operator encrypted and plain wellness telemetry logs"
+    },
+    "/users/{userId}/custom_pins/{pinId}": {
+      "schema": { "$ref": "#/entities/CustomPin" },
+      "description": "Geospatial coordinate pins belonging to an individual user"
+    },
+    "/landmarks/{landmarkId}": {
+      "schema": { "$ref": "#/entities/RegionalLandmark" },
+      "description": "Public regional sector landmarks and planetary grid nodes"
+    }
+  }
+}

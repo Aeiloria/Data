@@ -6,14 +6,27 @@ import { BiometricChart } from './components/BiometricChart';
 import { AudioConfigMenu } from './components/AudioConfigMenu';
 import { WaveAnalyzer } from './components/WaveAnalyzer';
 import { ArcGISViewport, InfrastructureNode } from './components/ArcGISViewport';
+import { DashboardWidget } from './components/DashboardWidget';
 import { RegionalLandmarkDeck } from './components/RegionalLandmarkDeck';
 import { SecureLogGuard } from './components/SecureLogGuard';
 import { SyncMonitorDeck } from './components/SyncMonitorDeck';
 import { PerfTesterDeck } from './components/PerfTesterDeck';
+import { BiometricHeatMap } from './components/BiometricHeatMap';
+import { CoherenceWarningAlert } from './components/CoherenceWarningAlert';
+import { BiometricThresholdPulseAlert } from './components/BiometricThresholdPulseAlert';
+import { IonosphericThreatToast, IonosphericThreatInfo } from './components/IonosphericThreatToast';
+import { CoherenceStreakLightWell } from './components/CoherenceStreakLightWell';
+import { ScalarShieldDailyMessage } from './components/ScalarShieldDailyMessage';
+import { AiAssistantSuite } from './components/AiAssistantSuite';
+import { PokemonGoLoveMeetup } from './components/PokemonGoLoveMeetup';
+import { ChildGuardianMode } from './components/ChildGuardianMode';
+import { WearableManager } from './components/WearableManager';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { useBleBiometrics } from './hooks/useBleBiometrics';
 import { useIndexedDB } from './hooks/useIndexedDB';
+import { useFirebaseAuth } from './hooks/useFirebaseAuth';
+import { useFirestoreSync } from './hooks/useFirestoreSync';
 import {
   startAudioProtectionFreq,
   stopAudioProtectionFreq,
@@ -38,6 +51,18 @@ export default function App() {
   const [solarWindSpeed, setSolarWindSpeed] = useState<number>(742.8);
   const [radioBlackoutScale, setRadioBlackoutScale] = useState<number>(3);
 
+  // Real-time Ionospheric Disturbance Threat State (from NOAA SWPC & ArcGISViewport)
+  const [ionosphericThreat, setIonosphericThreat] = useState<IonosphericThreatInfo | null>({
+    isCritical: kpIndex >= 6.0 || solarWindSpeed >= 700 || radioBlackoutScale >= 3,
+    threatLevel: kpIndex >= 6.0 ? 'CRITICAL' : 'ELEVATED',
+    kpIndex,
+    geomagneticStormScale: `G${Math.min(5, Math.max(1, Math.floor(kpIndex - 4)))}`,
+    radioBlackoutScale: `R${radioBlackoutScale}`,
+    solarWindSpeed,
+    ionosphericTecVariancePct: Math.round(kpIndex * 6.2),
+    lastUpdated: new Date().toLocaleTimeString(),
+  });
+
   // Active Infrastructure nodes state
   const [nodes, setNodes] = useState<InfrastructureNode[]>(() =>
     mockArcGISData.features.map((f: any) => ({
@@ -52,7 +77,10 @@ export default function App() {
   );
 
   // UI View Sections Tab state (allows compact mobile navigation or all-in-one view)
-  const [activeSection, setActiveSection] = useState<'OVERVIEW' | 'MAP' | 'AUDIO' | 'LOGS' | 'DIAGNOSTICS'>('OVERVIEW');
+  const [activeSection, setActiveSection] = useState<'OVERVIEW' | 'MAP' | 'LOVE_MEETUP' | 'AUDIO' | 'LOGS' | 'DIAGNOSTICS' | 'AI'>('OVERVIEW');
+
+  // Application Access State: 'CHILD' (Explorer Mode) vs 'MASTER' (Master Grid Operator Terminal)
+  const [appMode, setAppMode] = useState<'CHILD' | 'MASTER'>('CHILD');
 
   // 2. Hardware Subsystems & Local Storage Hooks
   const {
@@ -80,6 +108,34 @@ export default function App() {
     transformCustomPinToActiveLandmark,
     completeLandmark,
   } = useIndexedDB();
+
+  // Firebase Authentication & Firestore Cloud Sync
+  const { user, loginWithGoogle, logout } = useFirebaseAuth();
+  const { isSyncing, pushLogToCloud, pushPinToCloud, deletePinFromCloud } = useFirestoreSync(user);
+
+  // Wrapper to save log locally and sync to cloud if authenticated
+  const handleSaveWellnessLog = (log: any, secretPassphrase?: string) => {
+    saveWellnessLog(log, secretPassphrase);
+    if (user) {
+      pushLogToCloud(log);
+    }
+  };
+
+  // Wrapper to save custom pin locally and sync to cloud if authenticated
+  const handleSaveCustomPin = (pin: any) => {
+    saveCustomPin(pin);
+    if (user) {
+      pushPinToCloud(pin);
+    }
+  };
+
+  // Wrapper to delete pin locally and sync to cloud
+  const handleDeleteCustomPin = (pinId: string) => {
+    deleteCustomPin(pinId);
+    if (user) {
+      deletePinFromCloud(pinId);
+    }
+  };
 
   // Sync analyzer node link dynamically when audio is toggled
   useEffect(() => {
@@ -123,15 +179,16 @@ export default function App() {
   };
 
   const handleActionTrigger = (actionType: string) => {
+    const hrBefore = heartRate || 78;
+    const hrvBefore = hrvMs || 42;
+
     if (actionType === 'ANUHAZI_CHANT') {
       handleAudioToggle();
     } else if (actionType === 'YOGA_STRETCH') {
-      const hrBefore = heartRate || 78;
       const hrAfter = Math.max(62, hrBefore - 8);
-      const hrvBefore = hrvMs || 42;
       const hrvAfter = Math.min(80, hrvBefore + 16);
 
-      saveWellnessLog({
+      handleSaveWellnessLog({
         id: `log-${Date.now()}`,
         timestamp: new Date().toISOString(),
         type: 'YOGA_STRETCH & GROUNDING',
@@ -140,7 +197,91 @@ export default function App() {
         hrvBefore,
         hrvAfter,
         notes: 'Bio-coherence routine executed in response to solar excitation.'
-      }, '1212'); // Saved with AES-GCM encryption
+      }, '1212');
+    } else if (actionType === 'JHAN_TU_RAPID_REACTIVATION') {
+      const hrAfter = Math.max(60, hrBefore - 10);
+      const hrvAfter = Math.min(85, hrvBefore + 20);
+
+      handleSaveWellnessLog({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'JHAN-TU RAPID RE-ACTIVATION',
+        heartRateBefore: hrBefore,
+        heartRateAfter: hrAfter,
+        hrvBefore,
+        hrvAfter,
+        notes: 'Re-activated DN-1 Spins & Flows via Power-Command "Jhan-TU\' Et-eur\' Deu-A\'". Lotus touch on AzurA/Thymus.'
+      }, '1212');
+    } else if (actionType === 'GRAIL_STATE_ENTRY') {
+      const hrAfter = Math.max(58, hrBefore - 12);
+      const hrvAfter = Math.min(90, hrvBefore + 24);
+
+      handleSaveWellnessLog({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'GRAIL STATE IMMERSION',
+        heartRateBefore: hrBefore,
+        heartRateAfter: hrAfter,
+        hrvBefore,
+        hrvAfter,
+        notes: 'Entered Kara-nA\'dis Seal Cloud Cocoon. Affirmed: "I AM THE WATERS, I AM THE VOICE!" Reclaimed atomic GharE\'.'
+      }, '1212');
+    } else if (actionType === 'DAILY_FOOD_WATER_CLEARING') {
+      const hrAfter = Math.max(65, hrBefore - 5);
+      const hrvAfter = Math.min(75, hrvBefore + 10);
+
+      handleSaveWellnessLog({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'LIVING WATER & CONSUMABLES CHARGE',
+        heartRateBefore: hrBefore,
+        heartRateAfter: hrAfter,
+        hrvBefore,
+        hrvAfter,
+        notes: 'Cleared and charged consumables with Allur-E\'ah Ra-sha-tan code. Restored organic Hydrolase pre-water matrix.'
+      }, '1212');
+    } else if (actionType === 'PHASE_TONING_VOICE') {
+      const hrAfter = Math.max(64, hrBefore - 7);
+      const hrvAfter = Math.min(82, hrvBefore + 18);
+
+      handleSaveWellnessLog({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'PHASE-TONING 12-RHYTHM SEQUENCE',
+        heartRateBefore: hrBefore,
+        heartRateAfter: hrAfter,
+        hrvBefore,
+        hrvAfter,
+        notes: 'Executed 12-Phase Tonal-Rhythm sequence. Released Ghar-o\'che\' static, unified Ego-Mind with Body-Mind.'
+      }, '1212');
+    } else if (actionType === 'LOGAYANAS_BREATHING') {
+      const hrAfter = Math.max(60, hrBefore - 9);
+      const hrvAfter = Math.min(88, hrvBefore + 22);
+
+      handleSaveWellnessLog({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'LOGAYANAS FREQUENCY BREATHING',
+        heartRateBefore: hrBefore,
+        heartRateAfter: hrAfter,
+        hrvBefore,
+        hrvAfter,
+        notes: 'Performed MCEO Logayanas Entry-Level Kathara 1-3. 36-point Lotus Breaths from Ra Centre, stimulating KS-2 Lotus Points.'
+      }, '1212');
+    } else if (actionType === 'AH_RAYAS_PRACTICUM') {
+      const hrAfter = Math.max(66, hrBefore - 4);
+      const hrvAfter = Math.min(78, hrvBefore + 14);
+
+      handleSaveWellnessLog({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: '12:12 AH-RA\'-YAS PRACTICUM',
+        heartRateBefore: hrBefore,
+        heartRateAfter: hrAfter,
+        hrvBefore,
+        hrvAfter,
+        notes: 'Engaged Sliders-3 12:12 Ah-RA\'-yas dynamic repetitive motions. Generated quantum power in Axiatonal Lines and Uni-genetic Underlay (UGU).'
+      }, '1212');
     }
   };
 
@@ -156,14 +297,39 @@ export default function App() {
     );
   };
 
+  const handleShieldAllNodes = () => {
+    setNodes((prev) => prev.map((node) => ({ ...node, isShielded: true })));
+  };
+
   const handleSpaceWeatherChange = (
     field: 'kpIndex' | 'solarWindSpeed' | 'radioBlackoutScale',
     val: number
   ) => {
+    const updatedKp = field === 'kpIndex' ? val : kpIndex;
+    const updatedSpeed = field === 'solarWindSpeed' ? val : solarWindSpeed;
+    const updatedBlackout = field === 'radioBlackoutScale' ? val : radioBlackoutScale;
+
     if (field === 'kpIndex') setKpIndex(val);
     if (field === 'solarWindSpeed') setSolarWindSpeed(val);
     if (field === 'radioBlackoutScale') setRadioBlackoutScale(val);
+
+    const isCrit = updatedKp >= 6.0 || updatedSpeed >= 700 || updatedBlackout >= 3;
+    setIonosphericThreat((prev) => ({
+      isCritical: isCrit,
+      threatLevel: isCrit ? 'CRITICAL' : updatedKp >= 4.5 ? 'ELEVATED' : 'MODERATE',
+      kpIndex: updatedKp,
+      geomagneticStormScale: `G${Math.min(5, Math.max(0, Math.floor(updatedKp - 4)) || 1)}`,
+      radioBlackoutScale: `R${updatedBlackout}`,
+      solarWindSpeed: updatedSpeed,
+      ionosphericTecVariancePct: Math.round(updatedKp * 6.2),
+      lastUpdated: new Date().toLocaleTimeString(),
+    }));
   };
+
+  // Safe Child / Explorer Mode Gated Interface
+  if (appMode === 'CHILD') {
+    return <ChildGuardianMode onUnlockMaster={() => setAppMode('MASTER')} />;
+  }
 
   return (
     <div
@@ -178,6 +344,68 @@ export default function App() {
         paddingBottom: '40px'
       }}
     >
+      {/* Operator Quick Lock Back to Child Mode */}
+      <button 
+        onClick={() => setAppMode('CHILD')}
+        style={{
+          position: 'fixed',
+          top: '12px',
+          right: '12px',
+          zIndex: 9998,
+          padding: '6px 12px',
+          backgroundColor: '#ff3366',
+          color: '#ffffff',
+          borderRadius: '4px',
+          border: 'none',
+          fontFamily: 'monospace',
+          fontWeight: 'bold',
+          fontSize: '0.72em',
+          cursor: 'pointer',
+          boxShadow: '0 0 15px rgba(255, 51, 102, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+        }}
+        title="Lock terminal back to Child / Explorer Mode"
+      >
+        <span>🔒</span>
+        <span>LOCK TERMINAL</span>
+      </button>
+
+      {/* Floating Critical Ionospheric Threat Toast Notification */}
+      <IonosphericThreatToast
+        threat={ionosphericThreat}
+        currentActiveTab={activeSection}
+        onNavigateToAudioSynth={() => setActiveSection('AUDIO')}
+        onActivateAudioShield={() => {
+          if (!isAudioActive) handleAudioToggle();
+        }}
+        onSimulateCriticalSpike={() => {
+          setIonosphericThreat({
+            isCritical: true,
+            threatLevel: 'CRITICAL',
+            kpIndex: 8.5,
+            geomagneticStormScale: 'G4',
+            radioBlackoutScale: 'R4',
+            solarWindSpeed: 890.5,
+            ionosphericTecVariancePct: 76,
+            lastUpdated: new Date().toLocaleTimeString(),
+          });
+        }}
+        onResetThreat={() => {
+          setIonosphericThreat({
+            isCritical: false,
+            threatLevel: 'NOMINAL',
+            kpIndex: 2.1,
+            geomagneticStormScale: 'G0',
+            radioBlackoutScale: 'R0',
+            solarWindSpeed: 380,
+            ionosphericTecVariancePct: 8,
+            lastUpdated: new Date().toLocaleTimeString(),
+          });
+        }}
+      />
+
       {/* 2099 Broadcast Status Overlay Banner */}
       <div
         style={{
@@ -191,15 +419,99 @@ export default function App() {
           borderBottom: '1px solid #1a2636',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '8px'
         }}
       >
-        <span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {isAudioActive
             ? `🔊 BROADCAST LIVE // ${frequency}Hz TYPE_${waveType.toUpperCase()} COHERENCE LOCK ACTIVE`
             : '📡 HUB STANDBY // SCALAR DATA ARRAYS OFFLINE'}
         </span>
-        <PWAInstallButton />
+
+        {/* Cloud Account & PWA Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {isSyncing && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 8px',
+                backgroundColor: 'rgba(0, 255, 204, 0.15)',
+                border: '1px solid #00ffcc',
+                borderRadius: '3px',
+                fontSize: '0.68em',
+                color: '#00ffcc',
+                boxShadow: '0 0 10px rgba(0, 255, 204, 0.45)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#00ffcc',
+                  boxShadow: '0 0 6px #00ffcc'
+                }}
+              />
+              <span style={{ fontWeight: 'bold', letterSpacing: '0.5px' }}>
+                SYNCING...
+              </span>
+            </div>
+          )}
+
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  fontSize: '0.7em',
+                  color: '#00ffcc',
+                  backgroundColor: 'rgba(0, 255, 204, 0.1)',
+                  padding: '2px 6px',
+                  borderRadius: '2px',
+                  border: '1px solid #00ffcc'
+                }}
+              >
+                ☁️ {user.displayName?.split(' ')[0] || user.email || 'Operator'}
+              </span>
+              <button
+                onClick={logout}
+                style={{
+                  padding: '3px 6px',
+                  fontSize: '0.68em',
+                  backgroundColor: '#0a0f1d',
+                  color: '#8fa0ba',
+                  border: '1px solid #1a2636',
+                  borderRadius: '2px',
+                  cursor: 'pointer'
+                }}
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={loginWithGoogle}
+              style={{
+                padding: '3px 8px',
+                fontSize: '0.7em',
+                backgroundColor: '#101726',
+                color: '#00ffcc',
+                border: '1px solid #00ffcc',
+                borderRadius: '2px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              ☁️ Cloud Sign-In
+            </button>
+          )}
+          <PWAInstallButton />
+        </div>
       </div>
 
       {/* Main High-Density Interface Container */}
@@ -233,9 +545,11 @@ export default function App() {
           {[
             { id: 'OVERVIEW', label: 'OVERVIEW' },
             { id: 'MAP', label: 'RADAR MAP' },
+            { id: 'LOVE_MEETUP', label: '💖 LOVE RADAR' },
             { id: 'AUDIO', label: 'AUDIO SYNTH' },
             { id: 'LOGS', label: 'DATA VAULT' },
-            { id: 'DIAGNOSTICS', label: 'BENCHMARK & SYNC' }
+            { id: 'DIAGNOSTICS', label: 'BENCHMARK & SYNC' },
+            { id: 'AI', label: 'AI INTEL' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -259,6 +573,20 @@ export default function App() {
           ))}
         </div>
 
+        {/* Threshold-Based Biometric Deviation Visual Notification Pulse */}
+        <div style={{ marginTop: '10px' }}>
+          <BiometricThresholdPulseAlert
+            currentHeartRate={heartRate}
+            currentHrv={hrvMs}
+            isBleConnected={isBleConnected}
+            logs={wellnessLogs}
+            onTriggerAudioShield={handleAudioToggle}
+            onTriggerRecoveryRoutine={() => handleActionTrigger('LOGAYANAS_BREATHING')}
+            onSimulateElevated={triggerElevatedStressTest}
+            onSimulateOptimal={triggerOptimalBioCoherence}
+          />
+        </div>
+
         {/* SECTION 1: OVERVIEW */}
         {(activeSection === 'OVERVIEW' || activeSection === 'MAP') && (
           <>
@@ -270,15 +598,42 @@ export default function App() {
               onSimulateChange={handleSpaceWeatherChange}
             />
 
+            {/* Daily 12D Scalar Shield Status Message */}
+            {activeSection === 'OVERVIEW' && (
+              <div style={{ padding: '0 16px' }}>
+                <ScalarShieldDailyMessage />
+              </div>
+            )}
+
+            {/* Daily Coherence Streaks & Light-Well Indicator */}
+            {activeSection === 'OVERVIEW' && (
+              <div style={{ padding: '0 16px' }}>
+                <CoherenceStreakLightWell
+                  logs={wellnessLogs}
+                  onTriggerRoutine={handleActionTrigger}
+                />
+              </div>
+            )}
+
             {/* Localized Map Viewport Component */}
             <ArcGISViewport
               userLat={GATESVILLE_LAT}
               userLon={GATESVILLE_LON}
               nearbyNodes={nodes}
               customPins={customPins}
-              onAddPin={saveCustomPin}
+              onAddPin={handleSaveCustomPin}
               onClearShield={handleClearShield}
+              onIonosphericThreatChange={setIonosphericThreat}
             />
+
+            {/* Real-time Shield Integrity Radial Progress Gauge */}
+            <div style={{ padding: '0 16px' }}>
+              <DashboardWidget
+                nodes={nodes}
+                onShieldNode={handleClearShield}
+                onShieldAllNodes={handleShieldAllNodes}
+              />
+            </div>
 
             {/* Regional Landmarks & Objectives Deck */}
             <RegionalLandmarkDeck
@@ -288,6 +643,16 @@ export default function App() {
               onExecuteObjective={handleLandmarkObjective}
             />
           </>
+        )}
+
+        {/* SECTION: POKÉMON GO LOVE RADAR & 5-MILE MEETUPS */}
+        {(activeSection === 'OVERVIEW' || activeSection === 'LOVE_MEETUP' || activeSection === 'MAP') && (
+          <div style={{ padding: '0 16px' }}>
+            <PokemonGoLoveMeetup
+              onLogLoveRoutine={(log) => handleSaveWellnessLog(log as any)}
+              userEmail={user?.email || undefined}
+            />
+          </div>
         )}
 
         {/* SECTION 2: AUDIO SYNTH & WAVEFORM */}
@@ -310,6 +675,11 @@ export default function App() {
         {/* SECTION 3: BIOMETRIC FEEDBACK LOOP */}
         {(activeSection === 'OVERVIEW' || activeSection === 'AUDIO') && (
           <>
+            {/* Child Wearable Band BLE Link & Traffic Light Interface */}
+            <div style={{ padding: '0 16px', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+              <WearableManager />
+            </div>
+
             {/* Biometric Integration Action Controls */}
             <BiometricActionDeck
               heartRateBpm={heartRate}
@@ -339,21 +709,44 @@ export default function App() {
             onClearLogs={clearWellnessLogs}
             onClearPins={clearCustomPins}
             onClearAllData={clearEntireDatabase}
-            onDeletePin={deleteCustomPin}
+            onDeletePin={handleDeleteCustomPin}
             onTransformPin={transformCustomPinToActiveLandmark}
-            onSaveLog={saveWellnessLog}
+            onSaveLog={handleSaveWellnessLog}
           />
         )}
 
         {/* SECTION 5: DIAGNOSTICS & SYNC */}
         {(activeSection === 'OVERVIEW' || activeSection === 'DIAGNOSTICS') && (
           <>
+            {/* Visual Coherence Warning Alert */}
+            <CoherenceWarningAlert
+              logs={wellnessLogs}
+              currentHeartRate={heartRate}
+              currentHrv={hrvMs}
+              onTriggerHarmonicShield={handleAudioToggle}
+              onTriggerRecoveryRoutine={() => handleActionTrigger('YOGA_STRETCH')}
+              onSimulateElevated={triggerElevatedStressTest}
+              onSimulateOptimal={triggerOptimalBioCoherence}
+            />
+
+            {/* 24-Hour Diurnal Biometric Heat Map */}
+            <BiometricHeatMap
+              logs={wellnessLogs}
+              currentHeartRate={heartRate}
+              currentHrv={hrvMs}
+            />
+
             {/* Outbound Webhook Integration Monitoring Grid */}
             <SyncMonitorDeck />
 
             {/* IndexedDB Benchmark Speed Tester */}
             <PerfTesterDeck />
           </>
+        )}
+
+        {/* SECTION 6: AI INTEL SUITE */}
+        {(activeSection === 'OVERVIEW' || activeSection === 'AI') && (
+          <AiAssistantSuite />
         )}
 
         {/* Bluetooth Device Management Tray Layer */}

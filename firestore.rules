@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net - Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE HELPER PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "simply.abbeyd@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- ENTITY VALIDATION HELPERS ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'displayName']) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() <= 128 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 256)) &&
+             (!('accessTier' in data) || (data.accessTier in ['OPERATOR_LEVEL_1', 'OPERATOR_LEVEL_12', 'ADMINISTRATOR'])) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidWellnessLog(data) {
+      return data.keys().hasAll(['id', 'userId', 'timestamp', 'type', 'heartRateBefore', 'heartRateAfter']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.type is string && data.type.size() <= 100 &&
+             data.heartRateBefore is number && data.heartRateBefore >= 30 && data.heartRateBefore <= 250 &&
+             data.heartRateAfter is number && data.heartRateAfter >= 30 && data.heartRateAfter <= 250 &&
+             (!('encrypted' in data) || data.encrypted is bool) &&
+             (!('rawCiphertext' in data) || (data.rawCiphertext is string && data.rawCiphertext.size() <= 4096)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function isValidCustomPin(data) {
+      return data.keys().hasAll(['id', 'userId', 'label', 'latitude', 'longitude', 'pinnedAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.label is string && data.label.size() > 0 && data.label.size() <= 100 &&
+             data.latitude is number && data.latitude >= -90.0 && data.latitude <= 90.0 &&
+             data.longitude is number && data.longitude >= -180.0 && data.longitude <= 180.0;
+    }
+
+    function isValidLandmark(data) {
+      return data.keys().hasAll(['landmark_id', 'title', 'objective_type', 'latitude', 'longitude', 'required_proximity_meters']) &&
+             data.landmark_id is string && data.landmark_id.size() <= 128 &&
+             data.title is string && data.title.size() <= 128 &&
+             data.objective_type is string && data.objective_type.size() <= 64 &&
+             data.latitude is number && data.latitude >= -90.0 && data.latitude <= 90.0 &&
+             data.longitude is number && data.longitude >= -180.0 && data.longitude <= 180.0 &&
+             data.required_proximity_meters is number;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // 1. User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false; // Disallow scraping all users
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) &&
+                    incoming().userId == existing().userId;
+      allow delete: if isAdmin();
+
+      // 2. Subcollection: Wellness Logs
+      match /wellness_logs/{logId} {
+        allow get: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidId(logId) && isValidWellnessLog(incoming());
+        allow update: if isOwner(userId) && isValidId(logId) && isValidWellnessLog(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().id == existing().id;
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      // 3. Subcollection: Custom Coordinate Pins
+      match /custom_pins/{pinId} {
+        allow get: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidId(pinId) && isValidCustomPin(incoming());
+        allow update: if isOwner(userId) && isValidId(pinId) && isValidCustomPin(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().id == existing().id;
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // 4. Regional Landmarks & Sector Objectives
+    match /landmarks/{landmarkId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin() && isValidId(landmarkId) && isValidLandmark(incoming());
+      allow update: if (
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['is_completed', 'synchronized_at'])) ||
+        (isAdmin() && isValidLandmark(incoming()))
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}

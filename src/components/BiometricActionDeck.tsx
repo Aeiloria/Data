@@ -128,8 +128,8 @@ export const BiometricActionDeck: React.FC<BiometricInputs> = ({
         </div>
       </div>
 
-      {/* Interactive Command Array Buttons */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+      {/* Primary Interactive Command Array Buttons */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
         <button
           onClick={() => onTriggerRoutine('ANUHAZI_CHANT')}
           style={{
@@ -166,6 +166,158 @@ export const BiometricActionDeck: React.FC<BiometricInputs> = ({
         >
           🧘 LOG WELLNESS BLOCK
         </button>
+      </div>
+
+      {/* Sliders-2 Telluric Protocols: Aqua-Tone & Grail State Quick Triggers */}
+      <div
+        style={{
+          borderTop: '1px dashed #1a2636',
+          paddingTop: '10px',
+          marginTop: '6px',
+        }}
+      >
+        <div style={{ fontSize: '0.66em', color: '#8fa0ba', fontWeight: 'bold', marginBottom: '6px' }}>
+          SLIDERS-2 TELLURIC PROTOCOLS // AQUA-TONE™ PRACTICUM:
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <button
+            onClick={() => onTriggerRoutine('JHAN_TU_RAPID_REACTIVATION')}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: '#0b1626',
+              color: '#00ffcc',
+              border: '1px solid #1a324f',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '0.68em',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
+            title="Mental Power Command: Jhan-TU' Et-eur' Deu-A' (Reactivates DN-1 Spins & Flows)"
+          >
+            <span>⚡</span>
+            <span>JHAN-TU RE-ACTIVATION</span>
+          </button>
+
+          <button
+            onClick={() => onTriggerRoutine('GRAIL_STATE_ENTRY')}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: '#0b1626',
+              color: '#33ccff',
+              border: '1px solid #1a324f',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '0.68em',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
+            title="Grail State Quick Entry: 'I AM THE WATERS, I AM THE VOICE!'"
+          >
+            <span>💧</span>
+            <span>GRAIL STATE IMMERSION</span>
+          </button>
+
+          <button
+            onClick={() => onTriggerRoutine('DAILY_FOOD_WATER_CLEARING')}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: '#0b1626',
+              color: '#ffaa00',
+              border: '1px solid #1a324f',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '0.68em',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
+            title="Transmit Allur-E'ah Ra-sha-tan code to clear & charge water/food"
+          >
+            <span>💎</span>
+            <span>CLEAR & CHARGE WATER</span>
+          </button>
+
+          <button
+            onClick={() => onTriggerRoutine('PHASE_TONING_VOICE')}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: '#0b1626',
+              color: '#ff3399',
+              border: '1px solid #1a324f',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '0.68em',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
+            title="12-Phase Tonal-Rhythm Language: Shift from I HEAR THE VOICE to I AM THE VOICE"
+          >
+            <span>🗣️</span>
+            <span>PHASE-TONING ROUTINE</span>
+          </button>
+
+          <button
+            onClick={() => onTriggerRoutine('LOGAYANAS_BREATHING')}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: '#0b1626',
+              color: '#33ff99',
+              border: '1px solid #1a324f',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '0.68em',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
+            title="MCEO Logayanas Frequency Breathing Movements: Entry Level Kathara 1-3 Ra Centre Lotus Breaths"
+          >
+            <span>🌬️</span>
+            <span>LOGAYANAS BREATHING</span>
+          </button>
+
+          <button
+            onClick={() => onTriggerRoutine('AH_RAYAS_PRACTICUM')}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: '#0b1626',
+              color: '#ffcc00',
+              border: '1px solid #1a324f',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '0.68em',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
+            title="Sliders-3 12:12 Ah-RA'-yas: 48 dynamic movements for Axiatonal/Meridian quantum and Uni-genetic Underlay"
+          >
+            <span>⚡</span>
+            <span>12:12 AH-RA'-YAS PRACTICUM</span>
+          </button>
+        </div>
       </div>
 
       {/* Quick Test Toggles for developer/tester inspection */}
