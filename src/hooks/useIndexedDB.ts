@@ -185,6 +185,32 @@ export const useIndexedDB = () => {
     }
   }, [db, refreshData]);
 
+  // Clear all custom pins
+  const clearCustomPins = useCallback(() => {
+    if (!db) return;
+    try {
+      const tx = db.transaction(['custom_pins'], 'readwrite');
+      const store = tx.objectStore('custom_pins');
+      store.clear();
+      tx.oncomplete = () => refreshData(db);
+    } catch (err) {
+      console.error('Failed to clear custom pins:', err);
+    }
+  }, [db, refreshData]);
+
+  // Clear entire database (all stores)
+  const clearEntireDatabase = useCallback(() => {
+    if (!db) return;
+    try {
+      const tx = db.transaction(['wellness_logs', 'custom_pins'], 'readwrite');
+      tx.objectStore('wellness_logs').clear();
+      tx.objectStore('custom_pins').clear();
+      tx.oncomplete = () => refreshData(db);
+    } catch (err) {
+      console.error('Failed to clear entire IndexedDB:', err);
+    }
+  }, [db, refreshData]);
+
   // Transform a custom pin to an active regional landmark
   const transformCustomPinToActiveLandmark = useCallback(
     (pinId: string, customTitle?: string, objectiveType: string = 'ENERGY_STABILIZATION') => {
@@ -259,6 +285,8 @@ export const useIndexedDB = () => {
     saveCustomPin,
     deleteCustomPin,
     clearWellnessLogs,
+    clearCustomPins,
+    clearEntireDatabase,
     transformCustomPinToActiveLandmark,
     completeLandmark,
     reloadLocalStateArrays: () => db && refreshData(db)

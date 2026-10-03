@@ -1,185 +1,253 @@
 import React, { useState } from 'react';
 import { DataLogDashboard } from './DataLogDashboard';
-import { decryptPayload } from '../utils/cryptoEngine';
 import { WellnessLog, CustomPin, RegionalLandmark } from '../hooks/useIndexedDB';
 
-interface SecureGuardProps {
+interface SecureLogGuardProps {
   logs: WellnessLog[];
   pins: CustomPin[];
   landmarks?: RegionalLandmark[];
   onClearLogs?: () => void;
+  onClearPins?: () => void;
+  onClearAllData?: () => void;
   onDeletePin?: (pinId: string) => void;
   onTransformPin?: (pinId: string, customTitle?: string) => void;
+  onSaveLog?: (log: WellnessLog, secretPassphrase?: string) => void;
 }
 
-export const SecureLogGuard: React.FC<SecureGuardProps> = ({
+// Simple mock encryption/decryption functions for demonstrating state management
+const mockEncryptString = (text: string): string => {
+  try {
+    const encoded = btoa(text);
+    return `[ENC_AES256:${encoded.slice(0, 8)}..${encoded.slice(-4)}]`;
+  } catch (e) {
+    return `[ENC_AES256:7f8a9b2c]`;
+  }
+};
+
+export const SecureLogGuard: React.FC<SecureLogGuardProps> = ({
   logs,
   pins,
   landmarks = [],
   onClearLogs,
+  onClearPins,
+  onClearAllData,
   onDeletePin,
-  onTransformPin
+  onTransformPin,
 }) => {
-  const [passphrasePin, setPassphrasePin] = useState<string>('1212');
-  const [decryptedLogs, setDecryptedLogs] = useState<WellnessLog[]>([]);
-  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [isDecrypting, setIsDecrypting] = useState<boolean>(false);
+  // State for encryption/decryption toggle
+  const [isEncrypted, setIsEncrypted] = useState<boolean>(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // Check if any logs actually have encrypted payloads
-  const hasEncryptedLogs = logs.some((l) => l.encrypted && l.rawCiphertext);
+  const showNotice = (message: string) => {
+    setActionNotice(message);
+    setTimeout(() => setActionNotice(null), 3500);
+  };
 
-  const handleAttemptStorageUnlock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage('');
-
-    if (!passphrasePin || passphrasePin.length < 4) {
-      setErrorMessage('Verification token PIN must be at least 4 digits');
-      return;
-    }
-
-    setIsDecrypting(true);
-
-    try {
-      // If no encrypted logs, unlock immediately
-      if (!hasEncryptedLogs) {
-        setDecryptedLogs(logs);
-        setIsUnlocked(true);
-        setIsDecrypting(false);
-        return;
-      }
-
-      const unpackedBuffer: WellnessLog[] = [];
-
-      for (const log of logs) {
-        if (log.encrypted && log.rawCiphertext) {
-          try {
-            const clearText = await decryptPayload(log.rawCiphertext, passphrasePin);
-            const parsed = JSON.parse(clearText);
-            unpackedBuffer.push({
-              ...log,
-              type: parsed.type || log.type,
-              heartRateBefore: parsed.heartRateBefore ?? log.heartRateBefore,
-              heartRateAfter: parsed.heartRateAfter ?? log.heartRateAfter,
-              hrvBefore: parsed.hrvBefore ?? log.hrvBefore,
-              hrvAfter: parsed.hrvAfter ?? log.hrvAfter,
-              notes: parsed.notes ?? log.notes,
-            });
-          } catch (decryptErr) {
-            throw new Error('Invalid passphrase or corrupted cipher payload');
-          }
-        } else {
-          unpackedBuffer.push(log);
-        }
-      }
-
-      setDecryptedLogs(unpackedBuffer);
-      setIsUnlocked(true);
-    } catch (err: any) {
-      setErrorMessage('🛑 DECRYPTION FAULT: INVALID ACCESS TOKEN SIGNATURE');
-    } finally {
-      setIsDecrypting(false);
+  // Toggle encryption state using mock encryption/decryption logic
+  const handleToggleEncryption = () => {
+    if (isEncrypted) {
+      setIsEncrypted(false);
+      showNotice('🔓 VAULT DECRYPTED: Displaying cleartext biometric telemetry');
+    } else {
+      setIsEncrypted(true);
+      showNotice('🔒 VAULT ENCRYPTED: Applied mock AES-256 cipher mask across wellness logs');
     }
   };
 
-  if (isUnlocked) {
-    return (
-      <DataLogDashboard
-        logs={decryptedLogs.length > 0 ? decryptedLogs : logs}
-        pins={pins}
-        landmarks={landmarks}
-        onClearLogs={onClearLogs}
-        onDeletePin={onDeletePin}
-        onTransformPin={onTransformPin}
-        isEncryptedView={hasEncryptedLogs}
-        onLockStorage={() => setIsUnlocked(false)}
-      />
-    );
-  }
+  // Transform logs based on current encryption state
+  const displayedLogs: WellnessLog[] = isEncrypted
+    ? logs.map((log) => ({
+        ...log,
+        type: mockEncryptString(log.type),
+        notes: log.notes ? mockEncryptString(log.notes) : undefined,
+        encrypted: true,
+      }))
+    : logs.map((log) => ({
+        ...log,
+        encrypted: false,
+      }));
 
   return (
-    <div style={{ padding: '16px 20px', backgroundColor: '#060a13', borderTop: '1px solid #1a2636', fontFamily: 'monospace' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <h3 style={{ color: '#ffaa00', margin: 0, fontSize: '0.95em' }}>
-          🔒 DEVICE KEY RE-CALIBRATION // STENCIL VERIFICATION
-        </h3>
-        <span style={{ fontSize: '0.7em', color: '#8fa0ba' }}>
-          {logs.length} RECORDS {hasEncryptedLogs ? '(ENCRYPTED)' : '(STANDBY)'}
-        </span>
+    <div style={{ backgroundColor: '#060a13', borderTop: '1px solid #1a2636', fontFamily: 'monospace' }}>
+      {/* Data Vault Header Bar */}
+      <div
+        style={{
+          padding: '14px 20px',
+          backgroundColor: '#0a0f1d',
+          borderBottom: '1px solid #1a2636',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2em' }}>{isEncrypted ? '🔒' : '🔓'}</span>
+            <h3 style={{ color: '#00ffcc', margin: 0, fontSize: '0.98em', letterSpacing: '0.5px' }}>
+              DATA VAULT // LOCAL STORAGE SECURITY
+            </h3>
+          </div>
+          <div style={{ fontSize: '0.7em', color: '#8fa0ba', marginTop: '3px' }}>
+            CIPHER STATUS: <span style={{ color: isEncrypted ? '#ffaa00' : '#00ffcc', fontWeight: 'bold' }}>
+              {isEncrypted ? 'ENCRYPTED (MOCK AES-256)' : 'DECRYPTED (CLEARTEXT)'}
+            </span> • {logs.length} ROUTINES • {pins.length} PINS STORED
+          </div>
+        </div>
+
+        {/* Encryption/Decryption Action Trigger */}
+        <button
+          onClick={handleToggleEncryption}
+          style={{
+            padding: '6px 14px',
+            backgroundColor: isEncrypted ? '#101726' : 'rgba(0, 255, 204, 0.12)',
+            color: isEncrypted ? '#ffaa00' : '#00ffcc',
+            border: `1px solid ${isEncrypted ? '#ffaa00' : '#00ffcc'}`,
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontFamily: 'monospace',
+            fontSize: '0.75em',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {isEncrypted ? '🔓 DECRYPT WELLNESS LOGS' : '🔒 ENCRYPT WELLNESS LOGS'}
+        </button>
       </div>
 
-      <p style={{ color: '#8fa0ba', fontSize: '0.75em', margin: '0 0 12px 0', lineHeight: 1.4 }}>
-        Local IndexedDB transaction metrics and biometric coordinates are protected by AES-GCM encryption. Enter your operator verification PIN (default: 1212) to decrypt and inspect stored entries.
-      </p>
-
-      <form onSubmit={handleAttemptStorageUnlock} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <input
-          type="password"
-          value={passphrasePin}
-          onChange={(e) => setPassphrasePin(e.target.value)}
-          placeholder="ENTER SYMMETRIC VERIFICATION PIN"
+      {/* Action Confirmation Banner */}
+      {actionNotice && (
+        <div
           style={{
-            padding: '10px',
-            backgroundColor: '#101726',
-            color: '#ffffff',
-            border: `1px solid ${errorMessage ? '#ff0033' : '#1a2636'}`,
-            borderRadius: '4px',
+            backgroundColor: 'rgba(0, 255, 204, 0.15)',
+            borderBottom: '1px solid #00ffcc',
+            color: '#00ffcc',
+            padding: '8px 20px',
+            fontSize: '0.75em',
             textAlign: 'center',
-            fontSize: '1.1em',
-            letterSpacing: '4px',
-            fontFamily: 'monospace',
-            outline: 'none'
+            fontWeight: 'bold'
           }}
-        />
-
-        {errorMessage && (
-          <div style={{ color: '#ff0033', fontSize: '0.75em', textAlign: 'center', fontWeight: 'bold' }}>
-            {errorMessage}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="submit"
-            disabled={isDecrypting}
-            style={{
-              flex: 1,
-              padding: '10px',
-              backgroundColor: '#ffaa00',
-              color: '#0a0f1d',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isDecrypting ? 'wait' : 'pointer',
-              fontWeight: 'bold',
-              fontFamily: 'monospace',
-              fontSize: '0.8em',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {isDecrypting ? '⏳ COMPUTING AES-GCM DECRYPT...' : '🔓 EXECUTE COHERENCE DECRYPTION UNLOCK'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setDecryptedLogs(logs);
-              setIsUnlocked(true);
-            }}
-            style={{
-              padding: '10px 14px',
-              backgroundColor: '#101726',
-              color: '#8fa0ba',
-              border: '1px solid #1a2636',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.75em',
-              fontFamily: 'monospace'
-            }}
-          >
-            BYPASS (PLAIN)
-          </button>
+        >
+          {actionNotice}
         </div>
-      </form>
+      )}
+
+      {/* Embedded DataLogDashboard View */}
+      <DataLogDashboard
+        logs={displayedLogs}
+        pins={pins}
+        landmarks={landmarks}
+        onClearLogs={() => {
+          if (onClearLogs) {
+            onClearLogs();
+            showNotice('🗑️ Cleared wellness logs from IndexedDB');
+          }
+        }}
+        onDeletePin={(pinId) => {
+          if (onDeletePin) {
+            onDeletePin(pinId);
+            showNotice(`📍 Deleted pin ${pinId}`);
+          }
+        }}
+        onTransformPin={(pinId, customTitle) => {
+          if (onTransformPin) {
+            onTransformPin(pinId, customTitle);
+            showNotice('⚡ Upgraded pin into active regional landmark');
+          }
+        }}
+        isEncryptedView={isEncrypted}
+      />
+
+      {/* Clear Data Action Controls Tray */}
+      <div
+        style={{
+          padding: '12px 20px',
+          borderTop: '1px solid #1a2636',
+          backgroundColor: '#04070e',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '8px'
+        }}
+      >
+        <span style={{ fontSize: '0.7em', color: '#54657d', fontWeight: 'bold' }}>
+          CLEAR DATA ACTIONS:
+        </span>
+
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {onClearLogs && (
+            <button
+              onClick={() => {
+                if (window.confirm('Clear all historical wellness routine logs from local IndexedDB?')) {
+                  onClearLogs();
+                  showNotice('🗑️ All wellness logs purged from device memory');
+                }
+              }}
+              style={{
+                padding: '4px 10px',
+                backgroundColor: '#101726',
+                color: '#ffaa00',
+                border: '1px solid #1a2636',
+                borderRadius: '3px',
+                fontSize: '0.7em',
+                fontFamily: 'monospace',
+                cursor: 'pointer'
+              }}
+            >
+              Clear Routines ({logs.length})
+            </button>
+          )}
+
+          {onClearPins && (
+            <button
+              onClick={() => {
+                if (window.confirm('Clear all custom coordinate map pins from local IndexedDB?')) {
+                  onClearPins();
+                  showNotice('📍 All custom pins deleted from device memory');
+                }
+              }}
+              style={{
+                padding: '4px 10px',
+                backgroundColor: '#101726',
+                color: '#ffaa00',
+                border: '1px solid #1a2636',
+                borderRadius: '3px',
+                fontSize: '0.7em',
+                fontFamily: 'monospace',
+                cursor: 'pointer'
+              }}
+            >
+              Clear Pins ({pins.length})
+            </button>
+          )}
+
+          {onClearAllData && (
+            <button
+              onClick={() => {
+                if (window.confirm('CRITICAL: Purge entire local IndexedDB state (all routines & pins)?')) {
+                  onClearAllData();
+                  showNotice('⚠️ Entire local IndexedDB state reset to zero');
+                }
+              }}
+              style={{
+                padding: '4px 10px',
+                backgroundColor: 'rgba(255, 0, 51, 0.12)',
+                color: '#ff0033',
+                border: '1px solid #ff0033',
+                borderRadius: '3px',
+                fontSize: '0.7em',
+                fontFamily: 'monospace',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              ⚠️ Purge Entire IndexedDB
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
