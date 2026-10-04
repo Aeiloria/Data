@@ -53,16 +53,16 @@ export async function decryptPayload(compoundHexString: string, secretKeyToken: 
     throw new Error('Invalid stored database encryption envelope format');
   }
 
-  // Map hexadecimal arrays back into functional binary data buffers
-  const ivMatches = ivHex.match(/.{1,2}/g);
-  const cipherMatches = cipherHex.match(/.{1,2}/g);
-
-  if (!ivMatches || !cipherMatches) {
+  if (!/^(?:[0-9a-fA-F]{2})+$/.test(ivHex) || !/^(?:[0-9a-fA-F]{2})+$/.test(cipherHex)) {
     throw new Error('Malformed hexadecimal stream representation');
   }
 
-  const iv = new Uint8Array(ivMatches.map(byte => parseInt(byte, 16)));
-  const cipherData = new Uint8Array(cipherMatches.map(byte => parseInt(byte, 16)));
+  if (ivHex.length !== 24) {
+    throw new Error('Invalid initialization vector length');
+  }
+
+  const iv = new Uint8Array(ivHex.match(/.{2}/g)!.map(byte => parseInt(byte, 16)));
+  const cipherData = new Uint8Array(cipherHex.match(/.{2}/g)!.map(byte => parseInt(byte, 16)));
 
   const key = await deriveSymmetricKey(secretKeyToken);
 

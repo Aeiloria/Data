@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../firebase';
+import { syncAuthenticatedUserProfile } from '../utils/userProfileSync';
 
 export function useFirebaseAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -19,18 +20,12 @@ export function useFirebaseAuth() {
         console.log("Display Name:", firebaseUser.displayName);
 
         // Sync user profile document into Firestore
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
         try {
-          const userDoc = await getDoc(userDocRef);
-          if (!userDoc.exists()) {
-            await setDoc(userDocRef, {
-              userId: firebaseUser.uid,
-              displayName: firebaseUser.displayName || 'Grid Guardian Operator',
-              email: firebaseUser.email || '',
-              accessTier: 'OPERATOR_LEVEL_12',
-              createdAt: new Date().toISOString()
-            });
-          }
+          await syncAuthenticatedUserProfile(
+            firebaseUser,
+            async (userId) => (await getDoc(doc(db, 'users', userId))).exists(),
+            async (userId, profile) => setDoc(doc(db, 'users', userId), profile)
+          );
         } catch (err) {
           console.warn('User profile sync caught:', err);
         }
