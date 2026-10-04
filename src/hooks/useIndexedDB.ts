@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { encryptPayload, decryptPayload } from '../utils/cryptoEngine';
+import { decryptPayload } from '../utils/cryptoEngine';
+import {
+  createLandmarkFromPin,
+  markLandmarkComplete,
+  prepareWellnessLogForStorage
+} from '../utils/localDataMutations';
 import initialLandmarks from '../data/mockLandmarks.json';
 
 export interface WellnessLog {
@@ -121,21 +126,7 @@ export const useIndexedDB = () => {
   const saveWellnessLog = useCallback(async (log: WellnessLog, secretPassphrase?: string) => {
     if (!db) return;
     try {
-      let finalLog = { ...log };
-      if (secretPassphrase && secretPassphrase.trim().length >= 4) {
-        const payloadString = JSON.stringify({
-          type: log.type,
-          heartRateBefore: log.heartRateBefore,
-          heartRateAfter: log.heartRateAfter,
-          hrvBefore: log.hrvBefore,
-          hrvAfter: log.hrvAfter,
-          notes: log.notes,
-          timestamp: log.timestamp
-        });
-        const ciphertext = await encryptPayload(payloadString, secretPassphrase.trim());
-        finalLog.encrypted = true;
-        finalLog.rawCiphertext = ciphertext;
-      }
+      const finalLog = await prepareWellnessLogForStorage(log, secretPassphrase);
 
       const tx = db.transaction(['wellness_logs'], 'readwrite');
       const store = tx.objectStore('wellness_logs');
@@ -225,19 +216,7 @@ export const useIndexedDB = () => {
           const pin = getReq.result as CustomPin;
           if (!pin) return;
 
-          const newLandmark: RegionalLandmark = {
-            landmark_id: `poi-transformed-${pin.id}`,
-            title: customTitle || `Transformed Signet: ${pin.label}`,
-            objective_type: objectiveType,
-            latitude: pin.latitude,
-            longitude: pin.longitude,
-            required_proximity_meters: 100,
-            lore_text_block: `Community-generated grid checkpoint derived from local pin "${pin.label}". Aligns regional vector currents.`,
-            is_completed: false,
-            synchronized_at: new Date().toISOString()
-          };
-
-          landmarksStore.put(newLandmark);
+          landmarksStore.put(createLandmarkFromPin(pin, customTitle, objectiveType));
           pinsStore.delete(pinId);
         };
 
@@ -263,9 +242,7 @@ export const useIndexedDB = () => {
         req.onsuccess = () => {
           const item = req.result as RegionalLandmark;
           if (item) {
-            item.is_completed = true;
-            item.synchronized_at = new Date().toISOString();
-            store.put(item);
+            store.put(markLandmarkComplete(item));
           }
         };
         tx.oncomplete = () => refreshData(db);
